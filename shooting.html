@@ -1,0 +1,1063 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>서바이벌 슈팅 게임 - 대규모 업데이트</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #0b1409;
+            color: #fff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        #game-container {
+            position: relative;
+            width: 800px;
+            height: 600px;
+            box-shadow: 0 0 25px rgba(85, 255, 0, 0.2);
+            border-radius: 12px;
+            overflow: hidden;
+            border: 3px solid #3d6e27;
+        }
+
+        canvas {
+            background-color: #2b451d;
+            display: block;
+        }
+
+        .screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(12, 24, 10, 0.92);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+        }
+
+        h1 { font-size: 40px; margin-bottom: 10px; color: #76ff03; text-shadow: 0 0 10px #76ff03; }
+        h2 { font-size: 26px; margin-bottom: 20px; color: #ffeb3b; }
+        p { font-size: 15px; color: #dcedc8; margin-bottom: 25px; text-align: center; line-height: 1.5; }
+
+        .btn-group { display: flex; gap: 15px; }
+
+        button {
+            padding: 12px 28px;
+            font-size: 18px;
+            font-weight: bold;
+            color: #fff;
+            background: #1b3313;
+            border: 2px solid #76ff03;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        button:hover {
+            background: #76ff03;
+            color: #111;
+            box-shadow: 0 0 15px #76ff03;
+        }
+
+        .card-container {
+            display: flex;
+            gap: 15px;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: transform 0.5s ease-out, opacity 0.5s ease-out;
+        }
+
+        .card-container.active { transform: translateY(0); opacity: 1; }
+
+        .card {
+            width: 190px;
+            height: 240px;
+            background: #1e3816;
+            border: 2px solid #ffeb3b;
+            border-radius: 10px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            text-align: center;
+            box-sizing: border-box;
+        }
+
+        .card:hover {
+            transform: translateY(-10px) scale(1.03);
+            box-shadow: 0 0 20px #ffeb3b;
+            background: #2a4c1f;
+        }
+
+        .card h3 { color: #ffeb3b; margin: 5px 0; font-size: 16px; }
+        .card p { font-size: 12px; color: #dcedc8; margin: 0; line-height: 1.4; }
+
+        #ui {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            right: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 18px;
+            font-weight: bold;
+            pointer-events: none;
+            z-index: 5;
+            text-shadow: 2px 2px 4px #000;
+        }
+
+        .player-hp-bar-bg {
+            position: relative;
+            width: 260px;
+            height: 24px;
+            background: #111;
+            border: 2px solid #555;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 0 10px rgba(0,0,0,0.8);
+        }
+
+        .player-hp-bar-fill {
+            width: 100%;
+            height: 100%;
+            background: #00ff66;
+            box-shadow: 0 0 8px #00ff66;
+            transition: width 0.2s ease-out;
+        }
+
+        .player-hp-text {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; justify-content: center; align-items: center;
+            font-size: 13px; color: #ffffff; text-shadow: 1px 1px 3px #000;
+        }
+
+        /* 하단 보유 능력(버프) 리스트 UI */
+        #active-upgrades {
+            position: absolute;
+            bottom: 12px;
+            left: 15px;
+            display: flex;
+            gap: 8px;
+            z-index: 5;
+            pointer-events: none;
+            flex-wrap: wrap;
+            max-width: 760px;
+        }
+
+        .upgrade-badge {
+            background: rgba(18, 38, 14, 0.85);
+            border: 1px solid #76ff03;
+            border-radius: 20px;
+            padding: 4px 10px;
+            font-size: 12px;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+            text-shadow: 1px 1px 2px #000;
+        }
+
+        .bestiary-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-height: 380px;
+            overflow-y: auto;
+            width: 90%;
+            padding-right: 10px;
+        }
+
+        .bestiary-item {
+            display: flex;
+            align-items: center;
+            background: #182c12;
+            border: 1px solid #3d6e27;
+            padding: 8px 12px;
+            border-radius: 8px;
+            gap: 12px;
+        }
+
+        .bestiary-color { width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0; }
+        .bestiary-info h4 { margin: 0 0 3px 0; color: #76ff03; font-size: 15px; }
+        .bestiary-info p { margin: 0; font-size: 11px; color: #bbb; text-align: left; }
+
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <div id="ui">
+        <div>스테이지: <span id="stage-txt" style="color:#76ff03;">1</span></div>
+        <div class="player-hp-bar-bg">
+            <div id="hp-bar" class="player-hp-bar-fill"></div>
+            <div id="hp-txt" class="player-hp-text">100 / 100</div>
+        </div>
+        <div>남은 적: <span id="enemy-txt" style="color:#ffeb3b;">0</span></div>
+    </div>
+
+    <!-- 하단 선택 능력 아이콘 목록 -->
+    <div id="active-upgrades"></div>
+
+    <div id="start-screen" class="screen">
+        <h1>🌲 숲속 서바이벌</h1>
+        <p>W, A, S, D 키로 이동하세요. 자동 공격 시스템이 탑재되어 있습니다!</p>
+        <h2>난이도를 선택하세요</h2>
+        <div class="btn-group">
+            <button onclick="startGame('easy')">쉬움</button>
+            <button onclick="startGame('normal')">보통</button>
+            <button onclick="startGame('hard')">어려움</button>
+        </div>
+        <br>
+        <button onclick="openBestiary()" style="border-color:#ffeb3b; color:#ffeb3b;">📖 적 도감 보기</button>
+    </div>
+
+    <div id="bestiary-screen" class="screen hidden">
+        <h2>📖 적 도감 (Bestiary)</h2>
+        <div class="bestiary-list">
+            <div class="bestiary-item"><div class="bestiary-color" style="background:#ff4444;"></div><div class="bestiary-info"><h4>일반 적</h4><p>기본적인 적으로 평범하게 돌진합니다.</p></div></div>
+            <div class="bestiary-item"><div class="bestiary-color" style="background:#a6ff00;"></div><div class="bestiary-info"><h4>스피더</h4><p>빠른 속도로 달려옵니다.</p></div></div>
+            <div class="bestiary-item"><div class="bestiary-color" style="background:#00ffaa;"></div><div class="bestiary-info"><h4>슈퍼 스피더 [2+ Stage]</h4><p>엄청나게 빠른 속도로 돌진하는 위협적인 적입니다.</p></div></div>
+            <div class="bestiary-item"><div class="bestiary-color" style="background:#557a46;"></div><div class="bestiary-info"><h4>좀비 [3+ Stage]</h4><p>사망 시 1초 뒤 부활하며 공격 성공 시 체력을 회복합니다.</p></div></div>
+            <div class="bestiary-item"><div class="bestiary-color" style="background:#cc0044;"></div><div class="bestiary-info"><h4>탱커</h4><p>체력이 매우 높고 둔합니다.</p></div></div>
+            <div class="bestiary-item"><div class="bestiary-color" style="background:#ff9900;"></div><div class="bestiary-info"><h4>자폭병 [3+ Stage]</h4><p>죽으면 사방으로 폭발 탄환을 발사합니다.</p></div></div>
+            <div class="bestiary-item"><div class="bestiary-color" style="background:#b300ff;"></div><div class="bestiary-info"><h4>원거리 투사 [4+ Stage]</h4><p>구체 탄환을 발사합니다.</p></div></div>
+            <div class="bestiary-item"><div class="bestiary-color" style="background:#00ffff;"></div><div class="bestiary-info"><h4>저격수 [2+ Stage]</h4><p>강력한 레이저 조준 후 사격합니다.</p></div></div>
+            <div class="bestiary-item"><div class="bestiary-color" style="background:#ffffff; border:1px solid #aaa;"></div><div class="bestiary-info"><h4>고스트 [3+ Stage]</h4><p>가까워질수록 투명해지며, 70% 이상 투명 시 자동 공격에 조준되지 않습니다.</p></div></div>
+            <div class="bestiary-item"><div class="bestiary-color" style="background:#e67e22;"></div><div class="bestiary-info"><h4>용사 [4+ Stage]</h4><p>주변에 검을 돌리다 던집니다. 빗나가면 검을 주우러 이동하며 체력이 깎입니다.</p></div></div>
+            <div class="bestiary-item"><div class="bestiary-color" style="background:#ff0055;"></div><div class="bestiary-info"><h4>👑 거대 보스 [매 5 Stage]</h4><p>강력한 보스이며, 조준 후 레이저 포격을 퍼붓습니다.</p></div></div>
+        </div>
+        <br>
+        <button onclick="closeBestiary()">닫기</button>
+    </div>
+
+    <div id="upgrade-screen" class="screen hidden">
+        <h2>스테이지 클리어!</h2>
+        <p>보상을 하나 선택하세요</p>
+        <div id="cards" class="card-container"></div>
+    </div>
+
+    <div id="gameover-screen" class="screen hidden">
+        <h1 style="color:#ff4444; text-shadow:0 0 10px #ff4444;">GAME OVER</h1>
+        <p id="final-stats"></p>
+        <button onclick="location.reload()">다시 시작</button>
+    </div>
+
+    <canvas id="canvas" width="800" height="600"></canvas>
+</div>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+let gameState = 'MENU';
+let stage = 1;
+let keys = {};
+let difficulty = 'normal';
+
+const diffSettings = {
+    easy: { enemyHpMul: 0.7, enemySpeedMul: 0.8, enemyCountMul: 0.8, spawnGroup: 1 },
+    normal: { enemyHpMul: 1.0, enemySpeedMul: 0.95, enemyCountMul: 1.2, spawnGroup: 1 },
+    hard: { enemyHpMul: 1.3, enemySpeedMul: 1.1, enemyCountMul: 1.8, spawnGroup: 2 }
+};
+
+const player = {
+    x: 400, y: 300, radius: 15, color: '#00ffcc', speed: 4,
+    maxHp: 100, hp: 100, damage: 25, fireRate: 300, lastShoot: 0,
+    bulletSpeed: 8, bulletSize: 4, lifestealRate: 0, shotCount: 1,
+    hasPoison: false, freezeChance: 0, freezeDuration: 0, isSniperMode: false,
+    // 신규 능력 파라미터
+    hasSmoke: false, lastSmokeTime: 0,
+    magnetChance: 0,
+    bounceCount: 0,
+    shields: 0
+};
+
+let acquiredUpgrades = {}; // 선택한 능력 기록 { title: count }
+
+let bullets = [];
+let enemyBullets = [];
+let lasers = [];
+let delayedExplosions = [];
+let enemies = [];
+let poisonPuddles = [];
+let smokeClouds = [];
+let droppedSwords = [];
+let totalEnemiesToSpawn = 0;
+let spawnedEnemies = 0;
+let spawnTimer = null;
+let lastPos = { x: 400, y: 300 };
+
+// 자연 배경 데코 요소
+let grassProps = [];
+function generateNatureProps() {
+    grassProps = [];
+    for (let i = 0; i < 45; i++) {
+        grassProps.push({
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height,
+            size: 4 + Math.random() * 6,
+            type: Math.random() < 0.25 ? 'flower' : 'grass',
+            flowerColor: Math.random() < 0.5 ? '#fff176' : '#ffffff'
+        });
+    }
+}
+generateNatureProps();
+
+window.addEventListener('keydown', e => keys[e.key.toLowerCase()] = true);
+window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
+
+function openBestiary() {
+    document.getElementById('start-screen').classList.add('hidden');
+    document.getElementById('bestiary-screen').classList.remove('hidden');
+}
+
+function closeBestiary() {
+    document.getElementById('bestiary-screen').classList.add('hidden');
+    document.getElementById('start-screen').classList.remove('hidden');
+}
+
+function startGame(selectedDiff) {
+    difficulty = selectedDiff;
+    document.getElementById('start-screen').classList.add('hidden');
+    stage = 1;
+    player.hp = player.maxHp;
+    player.lifestealRate = 0;
+    player.shotCount = 1;
+    player.hasPoison = false;
+    player.freezeChance = 0;
+    player.freezeDuration = 0;
+    player.isSniperMode = false;
+    player.fireRate = 300;
+    player.hasSmoke = false;
+    player.magnetChance = 0;
+    player.bounceCount = 0;
+    player.shields = 0;
+    acquiredUpgrades = {};
+    updateUpgradeUI();
+
+    startStage();
+    gameState = 'PLAYING';
+    requestAnimationFrame(gameLoop);
+}
+
+function startStage() {
+    bullets = []; enemyBullets = []; lasers = []; delayedExplosions = [];
+    enemies = []; poisonPuddles = []; smokeClouds = []; droppedSwords = [];
+    const diff = diffSettings[difficulty];
+    
+    if (stage % 5 === 0) {
+        totalEnemiesToSpawn = 1;
+        spawnedEnemies = 1;
+        spawnBoss();
+    } else {
+        totalEnemiesToSpawn = Math.floor((6 + stage * 4) * diff.enemyCountMul);
+        spawnedEnemies = 0;
+
+        if (spawnTimer) clearInterval(spawnTimer);
+        spawnTimer = setInterval(() => {
+            if (gameState === 'PLAYING' && spawnedEnemies < totalEnemiesToSpawn) {
+                const count = Math.min(diff.spawnGroup, totalEnemiesToSpawn - spawnedEnemies);
+                for(let i = 0; i < count; i++) {
+                    spawnEnemy();
+                    spawnedEnemies++;
+                }
+            }
+        }, Math.max(400, 1200 - stage * 60));
+    }
+    updateUI();
+}
+
+function spawnBoss() {
+    const diff = diffSettings[difficulty];
+    enemies.push({
+        type: 'boss', x: 400, y: 80, color: '#ff0055', radius: 35,
+        hp: (400 + stage * 200) * diff.enemyHpMul,
+        maxHp: (400 + stage * 200) * diff.enemyHpMul,
+        speed: 1.2, damage: 25, isCharging: false, lastAction: performance.now(), frozenUntil: 0
+    });
+}
+
+function spawnEnemy() {
+    const diff = diffSettings[difficulty];
+    let type = 'normal';
+    const rand = Math.random();
+
+    if (stage >= 4 && rand < 0.1) type = 'hero';
+    else if (stage >= 3 && rand < 0.2) type = 'ghost';
+    else if (stage >= 3 && rand < 0.3) type = 'zombie';
+    else if (stage >= 2 && rand < 0.4) type = 'superspeeder';
+    else if (stage >= 4 && rand < 0.5) type = 'summoner';
+    else if (stage >= 2 && rand < 0.6) type = 'sniper';
+    else if (stage >= 4 && rand < 0.7) type = 'shooter';
+    else if (stage >= 3 && rand < 0.8) type = 'exploder';
+    else if (stage >= 2 && rand < 0.9) type = 'fast';
+
+    let x, y;
+    if (type === 'sniper') {
+        const borderMargin = 40;
+        if (Math.random() < 0.5) {
+            x = Math.random() < 0.5 ? borderMargin : canvas.width - borderMargin;
+            y = borderMargin + Math.random() * (canvas.height - borderMargin * 2);
+        } else {
+            x = borderMargin + Math.random() * (canvas.width - borderMargin * 2);
+            y = Math.random() < 0.5 ? borderMargin : canvas.height - borderMargin;
+        }
+    } else {
+        if (Math.random() < 0.5) {
+            x = Math.random() < 0.5 ? -20 : canvas.width + 20;
+            y = Math.random() * canvas.height;
+        } else {
+            x = Math.random() * canvas.width;
+            y = Math.random() < 0.5 ? -20 : canvas.height + 20;
+        }
+    }
+
+    let enemyConfig = {
+        type: type, x: x, y: y, color: '#ff4444', radius: 12,
+        hp: (20 + stage * 8) * diff.enemyHpMul,
+        speed: (1.4 + Math.random() * 0.3 + stage * 0.08) * diff.enemySpeedMul,
+        damage: 10, lastAction: performance.now(), isCharging: false, frozenUntil: 0,
+        confusedUntil: 0, wanderAngle: Math.random() * Math.PI * 2
+    };
+
+    if (type === 'fast') { enemyConfig.color = '#a6ff00'; enemyConfig.radius = 9; enemyConfig.hp *= 0.5; enemyConfig.speed *= 1.6; }
+    else if (type === 'superspeeder') { enemyConfig.color = '#00ffaa'; enemyConfig.radius = 10; enemyConfig.hp *= 0.6; enemyConfig.speed *= 2.4; }
+    else if (type === 'zombie') { enemyConfig.color = '#557a46'; enemyConfig.radius = 13; enemyConfig.hp *= 1.2; enemyConfig.canResurrect = true; }
+    else if (type === 'ghost') { enemyConfig.color = '#ffffff'; enemyConfig.radius = 12; enemyConfig.opacity = 1.0; }
+    else if (type === 'hero') { enemyConfig.color = '#e67e22'; enemyConfig.radius = 16; enemyConfig.hp *= 2.0; enemyConfig.hasSword = true; enemyConfig.swordAngle = 0; enemyConfig.targetSwordX = 0; enemyConfig.targetSwordY = 0; }
+    else if (type === 'tank') { enemyConfig.color = '#cc0044'; enemyConfig.radius = 22; enemyConfig.hp *= 2.5; enemyConfig.speed *= 0.6; enemyConfig.damage = 18; }
+    else if (type === 'exploder') { enemyConfig.color = '#ff9900'; enemyConfig.radius = 13; enemyConfig.hp *= 0.7; }
+    else if (type === 'shooter') { enemyConfig.color = '#b300ff'; enemyConfig.radius = 15; enemyConfig.hp *= 1.1; enemyConfig.speed *= 0.8; }
+    else if (type === 'sniper') { enemyConfig.color = '#00ffff'; enemyConfig.radius = 14; enemyConfig.hp *= 0.9; enemyConfig.speed *= 0.7; }
+    else if (type === 'summoner') { enemyConfig.color = '#ff00ff'; enemyConfig.radius = 18; enemyConfig.hp *= 2.2; enemyConfig.speed *= 0.5; }
+
+    enemyConfig.maxHp = enemyConfig.hp;
+    enemies.push(enemyConfig);
+}
+
+function gameLoop(time) {
+    if (gameState === 'PLAYING') {
+        update(time);
+        render(time);
+    }
+    if (gameState !== 'GAMEOVER') {
+        requestAnimationFrame(gameLoop);
+    }
+}
+
+function update(time) {
+    // 1. 플레이어 이동
+    let isMoving = false;
+    if ((keys['w'] || keys['arrowup']) && player.y - player.radius > 0) { player.y -= player.speed; isMoving = true; }
+    if ((keys['s'] || keys['arrowdown']) && player.y + player.radius < canvas.height) { player.y += player.speed; isMoving = true; }
+    if ((keys['a'] || keys['arrowleft']) && player.x - player.radius > 0) { player.x -= player.speed; isMoving = true; }
+    if ((keys['d'] || keys['arrowright']) && player.x + player.radius < canvas.width) { player.x += player.speed; isMoving = true; }
+
+    // 독성 자국
+    if (player.hasPoison && isMoving) {
+        if (Math.hypot(player.x - lastPos.x, player.y - lastPos.y) > 20) {
+            poisonPuddles.push({ x: player.x, y: player.y, radius: 18, createdAt: time, duration: 2000 });
+            lastPos = { x: player.x, y: player.y };
+        }
+    }
+    for (let i = poisonPuddles.length - 1; i >= 0; i--) {
+        let p = poisonPuddles[i];
+        if (time - p.createdAt > p.duration) { poisonPuddles.splice(i, 1); continue; }
+        enemies.forEach(e => {
+            if (time > e.frozenUntil && Math.hypot(e.x - p.x, e.y - p.y) < e.radius + p.radius) e.hp -= 0.4;
+        });
+    }
+
+    // 연막탄 발사
+    if (player.hasSmoke && time - player.lastSmokeTime > 5000) {
+        player.lastSmokeTime = time;
+        let validTargets = enemies.filter(e => e.type !== 'ghost' || (e.opacity !== undefined && e.opacity > 0.3));
+        if (validTargets.length > 0) {
+            validTargets.sort((a,b) => Math.hypot(a.x - player.x, a.y - player.y) - Math.hypot(b.x - player.x, b.y - player.y));
+            smokeClouds.push({ x: validTargets[0].x, y: validTargets[0].y, radius: 60, createdAt: time, duration: 3000 });
+        }
+    }
+    // 연막탄 처리
+    for (let i = smokeClouds.length - 1; i >= 0; i--) {
+        let s = smokeClouds[i];
+        if (time - s.createdAt > s.duration) { smokeClouds.splice(i, 1); continue; }
+        enemies.forEach(e => {
+            if (Math.hypot(e.x - s.x, e.y - s.y) < e.radius + s.radius) {
+                e.confusedUntil = time + 3000;
+            }
+        });
+    }
+
+    // 2. 플레이어 사격
+    // 고스트 70% 투명화 시 타겟팅 제외 로직
+    let validEnemies = enemies.filter(e => !(e.type === 'ghost' && e.opacity <= 0.3));
+
+    if (validEnemies.length > 0 && time - player.lastShoot > player.fireRate) {
+        let sortedEnemies = [...validEnemies].sort((a, b) => 
+            Math.hypot(a.x - player.x, a.y - player.y) - Math.hypot(b.x - player.x, b.y - player.y)
+        );
+
+        for (let i = 0; i < player.shotCount; i++) {
+            let target = sortedEnemies[i % sortedEnemies.length];
+            let angle = target ? Math.atan2(target.y - player.y, target.x - player.x) : (-Math.PI / 2 + (i * 0.2));
+
+            if (player.isSniperMode) {
+                lasers.push({
+                    owner: 'player', x1: player.x, y1: player.y, angle: angle,
+                    damage: player.damage * 2.5, createdAt: time, warnTime: 0, laserTime: 150, width: 6, color: '#00ffcc'
+                });
+            } else {
+                let isMagnet = Math.random() < player.magnetChance;
+                bullets.push({
+                    x: player.x, y: player.y,
+                    vx: Math.cos(angle) * player.bulletSpeed,
+                    vy: Math.sin(angle) * player.bulletSpeed,
+                    radius: player.bulletSize, damage: player.damage,
+                    bouncesLeft: player.bounceCount,
+                    isMagnet: isMagnet, returning: false, originDmg: player.damage
+                });
+            }
+        }
+        player.lastShoot = time;
+    }
+
+    // 3. 총알 업데이트 & 벽 반사/자석 회귀 로직
+    for (let i = bullets.length - 1; i >= 0; i--) {
+        let b = bullets[i];
+
+        if (b.returning) {
+            let angle = Math.atan2(player.y - b.y, player.x - b.x);
+            b.vx = Math.cos(angle) * (player.bulletSpeed * 1.2);
+            b.vy = Math.sin(angle) * (player.bulletSpeed * 1.2);
+            if (Math.hypot(player.x - b.x, player.y - b.y) < player.radius) {
+                bullets.splice(i, 1);
+                continue;
+            }
+        }
+
+        b.x += b.vx; b.y += b.vy;
+
+        // 벽 반사 (공 능력)
+        let hitWall = false;
+        if (b.x - b.radius < 0 || b.x + b.radius > canvas.width) {
+            b.vx *= -1; hitWall = true;
+        }
+        if (b.y - b.radius < 0 || b.y + b.radius > canvas.height) {
+            b.vy *= -1; hitWall = true;
+        }
+
+        if (hitWall) {
+            if (b.bouncesLeft > 0) {
+                b.bouncesLeft--;
+                b.damage *= 0.75;
+                b.radius += 2;
+            } else {
+                bullets.splice(i, 1);
+                continue;
+            }
+        }
+
+        // 적 충돌
+        for (let j = enemies.length - 1; j >= 0; j--) {
+            let e = enemies[j];
+            if (Math.hypot(b.x - e.x, b.y - e.y) < b.radius + e.radius) {
+                hitEnemy(e, b.damage, time);
+
+                if (b.isMagnet && !b.returning) {
+                    b.returning = true;
+                    b.damage = b.originDmg * 1.5; // 자석 되돌아오는 총알 데미지 증가
+                } else {
+                    bullets.splice(i, 1);
+                }
+                break;
+            }
+        }
+    }
+
+    // 4. 방패 회전 및 충돌 판정
+    const shieldOrbitRadius = 38;
+    const shieldAngle = (time * 0.003) % (Math.PI * 2);
+    let shieldPositions = [];
+    for (let s = 0; s < player.shields; s++) {
+        let offset = s * Math.PI;
+        shieldPositions.push({
+            x: player.x + Math.cos(shieldAngle + offset) * shieldOrbitRadius,
+            y: player.y + Math.sin(shieldAngle + offset) * shieldOrbitRadius,
+            radius: 12
+        });
+    }
+
+    // 방패로 적 투사체 막기
+    for (let i = enemyBullets.length - 1; i >= 0; i--) {
+        let eb = enemyBullets[i];
+        let blocked = false;
+        for (let sp of shieldPositions) {
+            if (Math.hypot(eb.x - sp.x, eb.y - sp.y) < eb.radius + sp.radius) {
+                blocked = true; break;
+            }
+        }
+        if (blocked) { enemyBullets.splice(i, 1); continue; }
+
+        eb.x += eb.vx; eb.y += eb.vy;
+        if (eb.x < 0 || eb.x > canvas.width || eb.y < 0 || eb.y > canvas.height) {
+            enemyBullets.splice(i, 1); continue;
+        }
+
+        if (Math.hypot(player.x - eb.x, player.y - eb.y) < player.radius + eb.radius) {
+            player.hp -= eb.damage;
+            enemyBullets.splice(i, 1);
+            updateUI();
+            if (player.hp <= 0) { player.hp = 0; gameOver(); return; }
+        }
+    }
+
+    // 5. 레이저 업데이트
+    for (let i = lasers.length - 1; i >= 0; i--) {
+        let l = lasers[i];
+        let elapsed = time - l.createdAt;
+
+        if (elapsed > l.warnTime + l.laserTime) { lasers.splice(i, 1); continue; }
+
+        if (elapsed >= l.warnTime) {
+            if (l.owner === 'enemy' || l.owner === 'sniper' || l.owner === 'boss') {
+                if (!l.hitPlayer && distToSegment({x: player.x, y: player.y}, l.x1, l.y1, l.angle)) {
+                    let dmg = l.damage;
+                    if (l.owner === 'sniper') dmg = player.maxHp * 0.5;
+                    player.hp -= dmg;
+                    l.hitPlayer = true;
+                    updateUI();
+                    if (player.hp <= 0) { player.hp = 0; gameOver(); return; }
+                }
+            } else if (l.owner === 'player') {
+                enemies.forEach(e => {
+                    if (distToSegment({x: e.x, y: e.y}, l.x1, l.y1, l.angle)) {
+                        hitEnemy(e, l.damage * 0.1, time);
+                    }
+                });
+            }
+        }
+    }
+
+    // 자폭병 폭발 delay
+    for (let i = delayedExplosions.length - 1; i >= 0; i--) {
+        let de = delayedExplosions[i];
+        if (time - de.createdAt >= 600) {
+            for (let k = 0; k < 8; k++) {
+                const angle = (Math.PI / 4) * k;
+                enemyBullets.push({ x: de.x, y: de.y, vx: Math.cos(angle) * 4, vy: Math.sin(angle) * 4, radius: 5, damage: 10 });
+            }
+            delayedExplosions.splice(i, 1);
+        }
+    }
+
+    // 적 처치 및 사망 로직 (좀비 부활 포함)
+    for (let j = enemies.length - 1; j >= 0; j--) {
+        let e = enemies[j];
+        if (e.hp <= 0) {
+            if (e.type === 'zombie' && e.canResurrect) {
+                e.canResurrect = false;
+                e.hp = e.maxHp * 0.5;
+                e.frozenUntil = time + 1000; // 1초 부활 대기
+                continue;
+            }
+            if (player.lifestealRate > 0) player.hp = Math.min(player.maxHp, player.hp + player.maxHp * player.lifestealRate);
+            if (e.type === 'exploder') delayedExplosions.push({ x: e.x, y: e.y, createdAt: time });
+            enemies.splice(j, 1);
+        }
+    }
+
+    // 떨어진 검 줍기 루프 (용사 적)
+    for (let i = droppedSwords.length - 1; i >= 0; i--) {
+        let sw = droppedSwords[i];
+        if (sw.owner && enemies.includes(sw.owner)) {
+            let e = sw.owner;
+            if (Math.hypot(e.x - sw.x, e.y - sw.y) < e.radius + 10) {
+                e.hasSword = true;
+                droppedSwords.splice(i, 1);
+            }
+        } else {
+            droppedSwords.splice(i, 1);
+        }
+    }
+
+    // 6. 적 개별 AI 및 이동 패턴
+    for (let i = enemies.length - 1; i >= 0; i--) {
+        let e = enemies[i];
+        if (time < e.frozenUntil) continue;
+
+        const distToPlayer = Math.hypot(player.x - e.x, player.y - e.y);
+        let angle = Math.atan2(player.y - e.y, player.x - e.x);
+
+        // 연막탄 혼란 상태일 때 랜덤 이동
+        if (time < e.confusedUntil) {
+            if (Math.random() < 0.05) e.wanderAngle = Math.random() * Math.PI * 2;
+            e.x += Math.cos(e.wanderAngle) * (e.speed * 0.8);
+            e.y += Math.sin(e.wanderAngle) * (e.speed * 0.8);
+        } else {
+            // 정상 행동
+            if (e.type === 'boss') {
+                e.x += Math.cos(angle) * e.speed;
+                e.y += Math.sin(angle) * e.speed;
+
+                // 보스 레이저 공격 패턴 버그 수정 (정상적인 레이저 발사)
+                if (time - e.lastAction > 2800) {
+                    e.lastAction = time;
+                    if (e.hp <= e.maxHp * 0.5) {
+                        [-0.25, 0, 0.25].forEach(offset => {
+                            lasers.push({
+                                owner: 'boss', x1: e.x, y1: e.y, angle: angle + offset,
+                                damage: e.damage, createdAt: time, warnTime: 600, laserTime: 350,
+                                width: 20, color: '#ff0055'
+                            });
+                        });
+                    } else {
+                        lasers.push({
+                            owner: 'boss', x1: e.x, y1: e.y, angle: angle,
+                            damage: e.damage, createdAt: time, warnTime: 600, laserTime: 350,
+                            width: 25, color: '#ff0055'
+                        });
+                    }
+                }
+            } else if (e.type === 'ghost') {
+                e.x += Math.cos(angle) * e.speed;
+                e.y += Math.sin(angle) * e.speed;
+                // 플레이어와 가까워질수록 투명해짐 (가장 가까우면 opacity = 0)
+                e.opacity = Math.max(0, Math.min(1, (distToPlayer - 40) / 260));
+            } else if (e.type === 'hero') {
+                if (e.hasSword) {
+                    e.swordAngle = (time * 0.005) % (Math.PI * 2);
+                    e.x += Math.cos(angle) * e.speed;
+                    e.y += Math.sin(angle) * e.speed;
+
+                    // 플레이어와 멀어지면 검 던지기
+                    if (distToPlayer > 180 && time - e.lastAction > 3000) {
+                        e.hasSword = false;
+                        e.lastAction = time;
+                        let swordVx = Math.cos(angle) * 7;
+                        let swordVy = Math.sin(angle) * 7;
+                        enemyBullets.push({
+                            x: e.x, y: e.y, vx: swordVx, vy: swordVy, radius: 8, damage: 18,
+                            isSword: true, ownerHero: e
+                        });
+                    }
+                } else {
+                    // 검이 없으면 타겟 검을 향해 이동
+                    let targetSw = droppedSwords.find(s => s.owner === e);
+                    if (targetSw) {
+                        let swAngle = Math.atan2(targetSw.y - e.y, targetSw.x - e.x);
+                        e.x += Math.cos(swAngle) * e.speed;
+                        e.y += Math.sin(swAngle) * e.speed;
+                    }
+                }
+            } else if (e.type === 'sniper') {
+                if (!e.isCharging) {
+                    if (distToPlayer > 300) { e.x += Math.cos(angle) * e.speed; e.y += Math.sin(angle) * e.speed; }
+                    if (time - e.lastAction > 3500) {
+                        e.isCharging = true; e.lastAction = time;
+                        lasers.push({
+                            owner: 'sniper', x1: e.x, y1: e.y, angle: angle,
+                            damage: 0, createdAt: time, warnTime: 600, laserTime: 200, width: 10, color: '#00ffff'
+                        });
+                        setTimeout(() => { e.isCharging = false; }, 800);
+                    }
+                }
+            } else if (e.type === 'summoner') {
+                e.x += Math.cos(angle) * e.speed; e.y += Math.sin(angle) * e.speed;
+                if (time - e.lastAction > 2200) {
+                    e.lastAction = time;
+                    setTimeout(() => { if (gameState === 'PLAYING') spawnEnemy(); }, 400);
+                }
+            } else if (e.type === 'shooter') {
+                if (distToPlayer > 220) { e.x += Math.cos(angle) * e.speed; e.y += Math.sin(angle) * e.speed; }
+                if (time - e.lastAction > 2200) {
+                    enemyBullets.push({ x: e.x, y: e.y, vx: Math.cos(angle) * 4.5, vy: Math.sin(angle) * 4.5, radius: 5, damage: 10 });
+                    e.lastAction = time;
+                }
+            } else {
+                e.x += Math.cos(angle) * e.speed;
+                e.y += Math.sin(angle) * e.speed;
+            }
+        }
+
+        // 방패 충돌 체크 (몸통 무효화)
+        let blockedByShield = false;
+        for (let sp of shieldPositions) {
+            if (Math.hypot(e.x - sp.x, e.y - sp.y) < e.radius + sp.radius) {
+                blockedByShield = true; break;
+            }
+        }
+
+        // 플레이어 몸통 직접 충돌
+        if (!blockedByShield && distToPlayer < player.radius + e.radius) {
+            player.hp -= e.damage;
+            if (e.type === 'zombie') e.hp = Math.min(e.maxHp, e.hp + e.maxHp * 0.3); // 좀비 체력 회복
+            if (e.type === 'exploder') delayedExplosions.push({ x: e.x, y: e.y, createdAt: time });
+            if (e.type !== 'boss') enemies.splice(i, 1);
+            updateUI();
+
+            if (player.hp <= 0) { player.hp = 0; gameOver(); return; }
+        }
+    }
+
+    // 검 투사체 플레이어 및 벽 처리
+    for (let i = enemyBullets.length - 1; i >= 0; i--) {
+        let eb = enemyBullets[i];
+        if (eb.isSword) {
+            if (eb.x < 0 || eb.x > canvas.width || eb.y < 0 || eb.y > canvas.height) {
+                // 빗나감: 검이 떨어진 자리에 위치하고 용사 데미지 입음
+                droppedSwords.push({ x: Math.max(20, Math.min(canvas.width - 20, eb.x)), y: Math.max(20, Math.min(canvas.height - 20, eb.y)), owner: eb.ownerHero });
+                if (eb.ownerHero) eb.ownerHero.hp -= eb.ownerHero.maxHp * 0.25;
+                enemyBullets.splice(i, 1);
+            }
+        }
+    }
+
+    updateUI();
+    if (spawnedEnemies >= totalEnemiesToSpawn && enemies.length === 0) stageClear();
+}
+
+function hitEnemy(enemy, damage, time) {
+    enemy.hp -= damage;
+    if (player.freezeChance > 0 && Math.random() < player.freezeChance) {
+        enemy.frozenUntil = time + player.freezeDuration;
+    }
+}
+
+function distToSegment(p, x1, y1, angle) {
+    const x2 = x1 + Math.cos(angle) * 1200;
+    const y2 = y1 + Math.sin(angle) * 1200;
+    const l2 = (x2 - x1) ** 2 + (y2 - y1) ** 2;
+    if (l2 === 0) return Math.hypot(p.x - x1, p.y - y1) < 15;
+    let t = ((p.x - x1) * (x2 - x1) + (p.y - y1) * (y2 - y1)) / l2;
+    t = Math.max(0, Math.min(1, t));
+    return Math.hypot(p.x - (x1 + t * (x2 - x1)), p.y - (y1 + t * (y2 - y1))) < 15;
+}
+
+function render(time) {
+    // 1. 잔디 배경 & 체크 그리드
+    ctx.fillStyle = '#2d4c1e'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#264219';
+    const gridSize = 40;
+    for (let x = 0; x < canvas.width; x += gridSize) {
+        for (let y = 0; y < canvas.height; y += gridSize) {
+            if ((x / gridSize + y / gridSize) % 2 === 0) ctx.fillRect(x, y, gridSize, gridSize);
+        }
+    }
+
+    // 자연 장식
+    grassProps.forEach(prop => {
+        ctx.fillStyle = prop.type === 'grass' ? '#3a6128' : prop.flowerColor;
+        ctx.beginPath(); ctx.arc(prop.x, prop.y, prop.size * (prop.type === 'grass' ? 1 : 0.6), 0, Math.PI * 2); ctx.fill();
+    });
+
+    // 독 장판
+    poisonPuddles.forEach(p => {
+        ctx.fillStyle = 'rgba(128, 255, 0, 0.3)';
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2); ctx.fill();
+    });
+
+    // 연막탄 구름
+    smokeClouds.forEach(s => {
+        ctx.fillStyle = 'rgba(200, 200, 200, 0.45)';
+        ctx.beginPath(); ctx.arc(s.x, s.y, s.radius, 0, Math.PI * 2); ctx.fill();
+    });
+
+    // 떨어진 검
+    droppedSwords.forEach(sw => {
+        ctx.strokeStyle = '#e67e22'; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.moveTo(sw.x - 8, sw.y - 8); ctx.lineTo(sw.x + 8, sw.y + 8); ctx.stroke();
+    });
+
+    // 자폭 경고선
+    delayedExplosions.forEach(de => {
+        ctx.strokeStyle = 'rgba(255, 100, 0, 0.7)'; ctx.lineWidth = 2;
+        for (let k = 0; k < 8; k++) {
+            const a = (Math.PI / 4) * k;
+            ctx.beginPath(); ctx.moveTo(de.x, de.y); ctx.lineTo(de.x + Math.cos(a) * 80, de.y + Math.sin(a) * 80); ctx.stroke();
+        }
+    });
+
+    // 레이저
+    lasers.forEach(l => {
+        let elapsed = time - l.createdAt;
+        const x2 = l.x1 + Math.cos(l.angle) * 1200;
+        const y2 = l.y1 + Math.sin(l.angle) * 1200;
+
+        if (elapsed < l.warnTime) {
+            ctx.strokeStyle = 'rgba(255, 30, 30, 0.5)'; ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.moveTo(l.x1, l.y1); ctx.lineTo(x2, y2); ctx.stroke();
+        } else {
+            ctx.strokeStyle = l.color; ctx.lineWidth = l.width; ctx.shadowBlur = 15; ctx.shadowColor = l.color;
+            ctx.beginPath(); ctx.moveTo(l.x1, l.y1); ctx.lineTo(x2, y2); ctx.stroke();
+            ctx.shadowBlur = 0;
+        }
+    });
+
+    // 플레이어 총알
+    bullets.forEach(b => {
+        ctx.fillStyle = b.returning ? '#ff00ff' : '#ffff00';
+        ctx.beginPath(); ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2); ctx.fill();
+    });
+
+    // 적 총알 / 던진 검
+    enemyBullets.forEach(eb => {
+        if (eb.isSword) {
+            ctx.strokeStyle = '#e67e22'; ctx.lineWidth = 4;
+            ctx.beginPath(); ctx.moveTo(eb.x - 10, eb.y - 10); ctx.lineTo(eb.x + 10, eb.y + 10); ctx.stroke();
+        } else {
+            ctx.fillStyle = '#ff3300';
+            ctx.beginPath(); ctx.arc(eb.x, eb.y, eb.radius, 0, Math.PI * 2); ctx.fill();
+        }
+    });
+
+    // 적 캐릭터
+    enemies.forEach(e => {
+        ctx.save();
+        if (e.type === 'ghost' && e.opacity !== undefined) {
+            ctx.globalAlpha = e.opacity;
+        }
+
+        ctx.fillStyle = (time < e.frozenUntil) ? '#00bfff' : e.color;
+        ctx.beginPath(); ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2); ctx.fill();
+
+        // 용사의 검
+        if (e.type === 'hero' && e.hasSword) {
+            let sx = e.x + Math.cos(e.swordAngle) * 28;
+            let sy = e.y + Math.sin(e.swordAngle) * 28;
+            ctx.strokeStyle = '#ffeb3b'; ctx.lineWidth = 3;
+            ctx.beginPath(); ctx.moveTo(e.x, e.y); ctx.lineTo(sx, sy); ctx.stroke();
+        }
+
+        // 체력바
+        ctx.fillStyle = '#333'; ctx.fillRect(e.x - 15, e.y - e.radius - 8, 30, 4);
+        ctx.fillStyle = '#ff4444'; ctx.fillRect(e.x - 15, e.y - e.radius - 8, Math.max(0, (e.hp / e.maxHp) * 30), 4);
+        ctx.restore();
+    });
+
+    // 방패 렌더링
+    const shieldOrbitRadius = 38;
+    const shieldAngle = (time * 0.003) % (Math.PI * 2);
+    for (let s = 0; s < player.shields; s++) {
+        let offset = s * Math.PI;
+        let sx = player.x + Math.cos(shieldAngle + offset) * shieldOrbitRadius;
+        let sy = player.y + Math.sin(shieldAngle + offset) * shieldOrbitRadius;
+        ctx.fillStyle = '#00aaff'; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(sx, sy, 8, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    }
+
+    // 플레이어
+    ctx.fillStyle = player.color;
+    ctx.beginPath(); ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2); ctx.fill();
+}
+
+function updateUI() {
+    const curHp = Math.max(0, Math.ceil(player.hp));
+    const maxHp = Math.ceil(player.maxHp);
+    document.getElementById('stage-txt').textContent = stage;
+    document.getElementById('hp-txt').textContent = `${curHp} / ${maxHp}`;
+    document.getElementById('enemy-txt').textContent = (totalEnemiesToSpawn - spawnedEnemies) + enemies.length;
+
+    const hpRatio = Math.max(0, (player.hp / player.maxHp) * 100);
+    const hpBar = document.getElementById('hp-bar');
+    hpBar.style.width = `${hpRatio}%`;
+    hpBar.style.background = hpRatio < 30 ? '#ff4444' : '#00ff66';
+}
+
+function updateUpgradeUI() {
+    const container = document.getElementById('active-upgrades');
+    container.innerHTML = '';
+    for (let [title, count] of Object.entries(acquiredUpgrades)) {
+        const badge = document.createElement('div');
+        badge.className = 'upgrade-badge';
+        badge.innerHTML = `<span>${title}</span>` + (count > 1 ? `<b style="color:#ffeb3b;">x${count}</b>` : '');
+        container.appendChild(badge);
+    }
+}
+
+function stageClear() {
+    gameState = 'UPGRADE';
+    clearInterval(spawnTimer);
+    showUpgradeOptions();
+}
+
+const allUpgrades = [
+    { title: '🌫️ 연막탄', desc: '5초마다 연막탄을 투척해 적들을 3초간 혼란 상태로 만듭니다.', unique: true, apply: () => player.hasSmoke = true },
+    { title: '🧲 자석', desc: '총알이 75% 확률로 되돌아오며 더 강한 데미지를 줍니다.', apply: () => player.magnetChance = Math.min(1.0, player.magnetChance + 0.75) },
+    { title: '⚾ 공', desc: '총알이 벽에 닿으면 2번 반사되며 커집니다.', apply: () => player.bounceCount += 2 },
+    { title: '🛡️ 방패', desc: '주변을 회전하는 방패가 추가되어 적과 공격을 완벽 차단합니다. (최대 2개)', condition: () => player.shields < 2, apply: () => player.shields++ },
+    { title: '❄️ 냉동', desc: '공격 시 40% 확률로 적을 얼립니다.', apply: () => { player.freezeChance = player.freezeChance === 0 ? 0.40 : player.freezeChance + 0.05; player.freezeDuration += 1500; } },
+    { title: '🎯 저격 모드', desc: '강력한 레이저를 쏘지만 연사 속도가 1초에 1발로 감소합니다.', unique: true, apply: () => { player.isSniperMode = true; player.fireRate = 1000; } },
+    { title: '🔫 멀티샷', desc: '총알을 1개 더 추가 발사합니다.', apply: () => player.shotCount++ },
+    { title: '🩸 흡혈', desc: '적 처치 시 체력 1%를 회복합니다.', apply: () => player.lifestealRate += 0.01 },
+    { title: '☠️ 독성 자국', desc: '이동 경로에 독 장판을 생성합니다.', unique: true, apply: () => player.hasPoison = true },
+    { title: '⚡ 연사력 증가', desc: '공격 속도가 25% 상승합니다.', condition: () => !player.isSniperMode, apply: () => player.fireRate *= 0.75 },
+    { title: '🔥 공격력 증가', desc: '데미지가 30% 증가합니다.', apply: () => player.damage *= 1.3 },
+    { title: '💖 체력 증가', desc: '최대 체력이 30 증가하고 회복합니다.', apply: () => { player.maxHp += 30; player.hp += 30; } }
+];
+
+function showUpgradeOptions() {
+    const cardsContainer = document.getElementById('cards');
+    cardsContainer.innerHTML = '';
+    cardsContainer.classList.remove('active');
+
+    let availableUpgrades = allUpgrades.filter(u => {
+        if (u.unique && acquiredUpgrades[u.title]) return false;
+        if (u.condition && !u.condition()) return false;
+        return true;
+    });
+
+    const shuffled = [...availableUpgrades].sort(() => 0.5 - Math.random());
+    const selected = shuffled.slice(0, 3);
+
+    selected.forEach(upg => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `<h3>${upg.title}</h3><p>${upg.desc}</p>`;
+        card.onclick = () => {
+            upg.apply();
+            acquiredUpgrades[upg.title] = (acquiredUpgrades[upg.title] || 0) + 1;
+            updateUpgradeUI();
+
+            stage++;
+            cardsContainer.classList.remove('active');
+            setTimeout(() => {
+                document.getElementById('upgrade-screen').classList.add('hidden');
+                gameState = 'PLAYING';
+                startStage();
+            }, 200);
+        };
+        cardsContainer.appendChild(card);
+    });
+
+    document.getElementById('upgrade-screen').classList.remove('hidden');
+    setTimeout(() => { cardsContainer.classList.add('active'); }, 50);
+}
+
+function gameOver() {
+    gameState = 'GAMEOVER';
+    clearInterval(spawnTimer);
+    document.getElementById('final-stats').textContent = `최종 도달 스테이지: ${stage}단계`;
+    document.getElementById('gameover-screen').classList.remove('hidden');
+}
+</script>
+
+</body>
+</html>
